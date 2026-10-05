@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_kaiyaletz/core/common/widgets/widgets.dart';
 import 'package:flutter_kaiyaletz/core/theme/app_colors.dart';
 import 'package:flutter_kaiyaletz/core/theme/app_text_styles.dart';
-import 'package:flutter_kaiyaletz/core/utils/d_print.dart';
 import 'package:flutter_kaiyaletz/core/utils/gap.dart';
 import 'package:flutter_kaiyaletz/core/utils/navigation.dart';
+import 'package:flutter_kaiyaletz/features/job/screens/select_job_screen.dart';
 
 import '../model/catalog_model.dart';
 import 'image_view.dart';
@@ -101,7 +101,11 @@ class CatalogDetailsScreen extends StatelessWidget {
       bottomBar: BottomActionBar(
         label: "Add to Project",
         onSimplePressed: () {
-          DPrint.log("ADD");
+          AppNav.to(
+            SelectJobScreen(item: item),
+            transition: .downToUp,
+            duration: Duration(milliseconds: 400),
+          );
         },
       ),
     );

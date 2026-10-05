@@ -142,6 +142,10 @@ class SelectProductStep extends ConsumerWidget {
       (sum, p) => sum + p.price * selected[p.id]!,
     );
 
+    final added =
+        ref.watch(jobProvider.select((s) => s.singleJob?.selectedProducts)) ??
+        [];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -157,6 +161,12 @@ class SelectProductStep extends ConsumerWidget {
             color: AppColors.textPrimary,
           ),
         ),
+        Gap(h: 16),
+        if (added.isNotEmpty) ...[
+          Text('Added Products', style: AppTextStyles.inputLabel),
+          Gap(h: 12),
+          ...added.map((i) => tile(i.productId)),
+        ],
         Gap(h: 16),
         if (isLoading && catalogs.isEmpty)
           const Center(child: CircularProgressIndicator()),

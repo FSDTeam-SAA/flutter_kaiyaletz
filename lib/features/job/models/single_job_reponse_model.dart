@@ -5,12 +5,40 @@ import 'job_create_response_model.dart';
 
 part 'single_job_reponse_model.g.dart';
 
-/// Accepts null / [] / a list of catalog objects. Anything that isn't an
-/// object (e.g. a bare id string) is skipped instead of throwing.
-List<CatalogModel> _productsFromJson(Object? json) => [
+/// Accepts null / [] / a list of line-item objects. Anything that isn't an
+/// object is skipped instead of throwing.
+List<SelectedProductModel> _productsFromJson(Object? json) => [
   for (final item in (json as List? ?? const []))
-    if (item is Map<String, dynamic>) CatalogModel.fromJson(item),
+    if (item is Map<String, dynamic>) SelectedProductModel.fromJson(item),
 ];
+
+/// One line of `selectedProducts`: a catalog product (under `productId`)
+/// plus its quantity and pricing for this job.
+@JsonSerializable(checked: true)
+class SelectedProductModel {
+  @JsonKey(name: '_id')
+  final String? id;
+
+  @JsonKey(required: true, disallowNullValue: true)
+  final CatalogModel productId;
+
+  final int quantity;
+  final num unitPrice;
+  final num lineTotal;
+
+  const SelectedProductModel({
+    this.id,
+    required this.productId,
+    this.quantity = 1,
+    this.unitPrice = 0,
+    this.lineTotal = 0,
+  });
+
+  factory SelectedProductModel.fromJson(Map<String, dynamic> json) =>
+      _$SelectedProductModelFromJson(json);
+
+  Map<String, dynamic> toJson() => _$SelectedProductModelToJson(this);
+}
 
 /// Shape of the `data` object for `GET /jobs/:id`.
 @JsonSerializable(checked: true, disallowUnrecognizedKeys: true)
@@ -53,8 +81,7 @@ class SingleJobResponseModel {
   final Measurements? measurements;
 
   @JsonKey(fromJson: _productsFromJson)
-  @JsonKey(fromJson: _productsFromJson)
-  final List<CatalogModel>? selectedProducts;
+  final List<SelectedProductModel>? selectedProducts;
 
   final AiLayout? aiLayout;
 

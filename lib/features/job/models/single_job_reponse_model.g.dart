@@ -6,6 +6,37 @@ part of 'single_job_reponse_model.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
+SelectedProductModel _$SelectedProductModelFromJson(
+  Map<String, dynamic> json,
+) => $checkedCreate('SelectedProductModel', json, ($checkedConvert) {
+  $checkKeys(
+    json,
+    requiredKeys: const ['productId'],
+    disallowNullValues: const ['productId'],
+  );
+  final val = SelectedProductModel(
+    id: $checkedConvert('_id', (v) => v as String?),
+    productId: $checkedConvert(
+      'productId',
+      (v) => CatalogModel.fromJson(v as Map<String, dynamic>),
+    ),
+    quantity: $checkedConvert('quantity', (v) => (v as num?)?.toInt() ?? 1),
+    unitPrice: $checkedConvert('unitPrice', (v) => v as num? ?? 0),
+    lineTotal: $checkedConvert('lineTotal', (v) => v as num? ?? 0),
+  );
+  return val;
+}, fieldKeyMap: const {'id': '_id'});
+
+Map<String, dynamic> _$SelectedProductModelToJson(
+  SelectedProductModel instance,
+) => <String, dynamic>{
+  '_id': instance.id,
+  'productId': instance.productId,
+  'quantity': instance.quantity,
+  'unitPrice': instance.unitPrice,
+  'lineTotal': instance.lineTotal,
+};
+
 SingleJobResponseModel _$SingleJobResponseModelFromJson(
   Map<String, dynamic> json,
 ) => $checkedCreate('SingleJobResponseModel', json, ($checkedConvert) {

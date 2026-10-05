@@ -14,9 +14,13 @@ import 'status_chip.dart';
 /// leave it off for a fixed, non-scrolling preview embedded in another
 /// scroll view (Home "Recent Jobs" — shows just the first page).
 class JobListView extends ConsumerWidget {
-  const JobListView({super.key, this.paginate = false});
+  const JobListView({super.key, this.paginate = false, this.onJobTap});
 
   final bool paginate;
+
+  /// Called when a job is tapped. Defaults to opening the job's progress
+  /// screen.
+  final ValueChanged<JobModel>? onJobTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -42,7 +46,7 @@ class JobListView extends ConsumerWidget {
         physics: const NeverScrollableScrollPhysics(),
         itemCount: jobs.length,
         separatorBuilder: (context, index) => const SizedBox(height: 12),
-        itemBuilder: (context, index) => _JobListTile(job: jobs[index]),
+        itemBuilder: (context, index) => _JobListTile(job: jobs[index], onJobTap: onJobTap),
       );
     }
 
@@ -79,7 +83,7 @@ class JobListView extends ConsumerWidget {
                     if (!isLoadingMore) return const SizedBox.shrink();
                     return Center(child: CircularProgressIndicator());
                   }
-                  return _JobListTile(job: jobs[index]);
+                  return _JobListTile(job: jobs[index], onJobTap: onJobTap);
                 },
               ),
       ),
@@ -88,9 +92,10 @@ class JobListView extends ConsumerWidget {
 }
 
 class _JobListTile extends ConsumerWidget {
-  const _JobListTile({required this.job});
+  const _JobListTile({required this.job, this.onJobTap});
 
   final JobModel job;
+  final ValueChanged<JobModel>? onJobTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -104,9 +109,9 @@ class _JobListTile extends ConsumerWidget {
       totalSteps: jobStepNames.length,
       stepLabel: jobCtrl.jobStepLabel(job.currentStep),
       date: formatDate(job.date),
-      onTap: () {
-        jobCtrl.getJobById(job.id);
-      },
+      onTap: () => onJobTap != null
+          ? onJobTap!(job)
+          : jobCtrl.getJobById(job.id),
     );
   }
 }

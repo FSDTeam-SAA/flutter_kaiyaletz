@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter_kaiyaletz/core/utils/app_snackbar.dart';
 import 'package:flutter_kaiyaletz/core/utils/d_print.dart';
 import 'package:flutter_kaiyaletz/core/utils/navigation.dart';
 import 'package:flutter_kaiyaletz/features/job/models/job_create_response_model.dart';
@@ -181,6 +182,26 @@ class JobController extends Notifier<JobState> {
     state = state.copyWith(job: [job, ...?state.job]);
   }
 
+  /// Adds a catalog product to a job. Returns true on success.
+  Future<bool> addProductToJob({
+    required String jobId,
+    required String productId,
+    int quantity = 1,
+  }) async {
+    state = state.copyWith(isJobLoading: true);
+
+    final result = await ref
+        .read(jobRepo)
+        .addProductToJob(
+          jobId: jobId,
+          productId: productId,
+          quantity: quantity,
+        );
+
+    state = state.copyWith(isJobLoading: false);
+    return result.isRight();
+  }
+
   /// e.g. "Step 4: AI Layout" for currentStep == 4.
   String jobStepLabel(int currentStep) {
     final index = (currentStep - 1).clamp(0, jobStepNames.length - 1);
@@ -238,5 +259,25 @@ class JobController extends Notifier<JobState> {
     if (!state.selectedQty.containsKey(id)) return;
     if (qty < 1) return;
     state = state.copyWith(selectedQty: {...state.selectedQty, id: qty});
+  }
+
+  Future<void> saveSelectedProducts({
+    required String jobId,
+    required List<SelectedProductInput> products,
+  }) async {
+    state = state.copyWith(isJobLoading: true);
+    final result = await ref
+        .read(jobRepo)
+        .saveSelectedProducts(jobId: jobId, products: products);
+
+    result.fold(
+      (f) {
+        state = state.copyWith(isJobLoading: false);
+        AppSnackbar.info(f.message);
+      },
+      (r) {
+        // state = state.copyWith(isJobLoading: false);
+      },
+    );
   }
 }
