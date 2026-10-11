@@ -24,9 +24,13 @@ enum LayoutTier {
   explicitToJson: true,
 )
 class JobLayout {
-  /// e.g. "rules-v1".
+  /// "rules-v1", or `<model>+rules-v1` (e.g. "qwen3:8b+rules-v1") when an
+  /// LLM planned the layout and the rules placed and checked it.
   @JsonKey(required: true, disallowNullValue: true)
   final String engine;
+
+  /// The LLM model that planned this layout, or null for rules only.
+  String? get aiModel => engine.contains('+') ? engine.split('+').first : null;
 
   @JsonKey(required: true, disallowNullValue: true)
   final List<LayoutItem> items;
@@ -132,7 +136,8 @@ class JobLayout {
   }
 
   /// Space a tier can't use on wall [w]: previous run's corner, doors,
-  /// windows and the hob. Mirrors roomSpans() in the backend.
+  /// windows and the hob (plus 300 mm heat clearance for tall units).
+  /// Mirrors roomSpans() in the backend.
   List<(int, int)> _roomSpans(RoomSpec room, int w, LayoutTier tier) {
     int depthOf(LayoutTier t) => items
         .where((i) => i.tier == t)
@@ -147,7 +152,9 @@ class JobLayout {
           .hob => tier != .base,
           .sink => false,
         })
-          (o.offsetMm, o.offsetMm + o.widthMm),
+          o.type == .hob && tier == .tall
+              ? (o.offsetMm - 300, o.offsetMm + o.widthMm + 300)
+              : (o.offsetMm, o.offsetMm + o.widthMm),
     ];
   }
 

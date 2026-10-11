@@ -354,6 +354,16 @@ class _AiLayoutStepState extends ConsumerState<AiLayoutStep> {
               Text('Layout Engine', style: AppTextStyles.listTitle),
               Gap(h: 4),
               Text(status, style: AppTextStyles.bodySmall),
+              if (!busy && layout != null) ...[
+                Gap(h: 4),
+                Text(
+                  layout.aiModel != null
+                      ? 'Planned by AI (${layout.aiModel}), checked by the layout rules'
+                      : 'Planned by the layout rules (AI unavailable)',
+                  style: AppTextStyles.caption,
+                  textAlign: TextAlign.center,
+                ),
+              ],
               if (busy) ...[
                 Gap(h: 12),
                 const LinearProgressIndicator(
