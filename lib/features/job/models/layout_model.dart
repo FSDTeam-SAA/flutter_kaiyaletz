@@ -121,6 +121,9 @@ class JobLayout {
       ).any((s) => _overlaps(s, (start, end)))) {
         found.add('${item.sku} blocks a door, window, hob or corner');
       }
+      if (item.tier == .tall && item.heightMm > room.lowestCeilingMm(w)) {
+        found.add('${item.sku} is taller than the ceiling on ${wallName(w)}');
+      }
       for (final other in items.skip(n + 1)) {
         if (other.wallId == item.wallId &&
             _conflicts(item.tier, other.tier) &&
@@ -135,8 +138,9 @@ class JobLayout {
     return found;
   }
 
-  /// Space a tier can't use on wall [w]: previous run's corner, doors,
-  /// windows and the hob (plus 300 mm heat clearance for tall units).
+  /// Space a tier can't use on wall [w]: previous run's corner (none in a
+  /// galley), doors, windows and the hob (plus 300 mm heat clearance for
+  /// tall units).
   /// Mirrors roomSpans() in the backend.
   List<(int, int)> _roomSpans(RoomSpec room, int w, LayoutTier tier) {
     int depthOf(LayoutTier t) => items
@@ -144,7 +148,8 @@ class JobLayout {
         .fold(t == .wall ? 350 : 600, (d, i) => max(d, i.depthMm));
 
     return [
-      if (w > 0) (0, depthOf(tier == .wall ? .wall : .base)),
+      if (w > 0 && room.shape.hasCorners)
+        (0, depthOf(tier == .wall ? .wall : .base)),
       for (final o in room.walls[w].openings)
         if (switch (o.type) {
           .door => true,

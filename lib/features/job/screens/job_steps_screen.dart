@@ -4,8 +4,10 @@ import 'package:flutter_kaiyaletz/core/utils/date_formatter.dart';
 import 'package:flutter_kaiyaletz/core/utils/gap.dart';
 import 'package:flutter_kaiyaletz/core/utils/navigation.dart';
 import 'package:flutter_kaiyaletz/features/measure/model/measure_state.dart';
+import 'package:flutter_kaiyaletz/features/measure/model/room_scan.dart';
 import 'package:flutter_kaiyaletz/features/measure/model/room_spec.dart';
 import 'package:flutter_kaiyaletz/features/measure/screens/ar_measure_screen.dart';
+import 'package:flutter_kaiyaletz/features/measure/screens/room_scan_screen.dart';
 import 'package:flutter_kaiyaletz/features/measure/widgets/room_spec_editor.dart';
 import 'package:flutter_kaiyaletz/features/catalog/controller/catalog_cotroller.dart';
 import 'package:flutter_kaiyaletz/features/job/controller/job_controller.dart';
@@ -97,9 +99,18 @@ class RoomCaptureStep extends ConsumerWidget {
         .setRoomDraft(RoomSpec.fromCornerPoints(result.points));
   }
 
+  /// Scans the room with RoomPlan; the user picks the kitchen walls.
+  Future<void> _scanLidar(WidgetRef ref) async {
+    final result = await AppNav.to<RoomScanResult>(const RoomScanScreen());
+    if (result == null) return;
+    ref.read(jobProvider.notifier).setRoomDraft(result.room);
+    if (result.notes.isNotEmpty) AppSnackbar.warning(result.notes.join('\n'));
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final room = ref.watch(jobProvider.select((s) => s.roomDraft));
+    final lidar = ref.watch(roomScanSupportedProvider).value ?? false;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -110,12 +121,25 @@ class RoomCaptureStep extends ConsumerWidget {
           style: AppTextStyles.bodyMedium,
         ),
         Gap(h: 16),
+        if (lidar) ...[
+          OptionCard(
+            icon: Icons.view_in_ar_outlined,
+            title: 'LiDAR Room Scan',
+            description:
+                'Walls, doors, windows, sink and hob are found automatically',
+            badgeLabel: 'LiDAR',
+            isSelected: room?.source == .lidarScan,
+            onTap: () => _scanLidar(ref),
+          ),
+          Gap(h: 12),
+        ],
         OptionCard(
           icon: Icons.photo_camera_outlined,
           title: 'Room Scan',
           description: 'Pin each kitchen corner at floor level with the camera',
           badgeLabel: 'AR',
-          isSelected: room?.isEstimate ?? false,
+          isSelected:
+              room != null && room.isEstimate && room.source != .lidarScan,
           onTap: () => _scan(ref),
         ),
         Gap(h: 12),

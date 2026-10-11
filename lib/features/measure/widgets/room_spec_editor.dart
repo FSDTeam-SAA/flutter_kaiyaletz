@@ -51,7 +51,14 @@ class RoomSpecEditor extends StatelessWidget {
             key: ValueKey(room.walls[i].id),
             index: i,
             wall: room.walls[i],
+            roomCeilingMm: room.ceilingHeightMm,
             onChanged: (w) => onChanged(room.withWall(i, w)),
+            // The corner this wall shares with the previous one.
+            cornerAngleDeg: i > 0 && room.shape.hasCorners
+                ? room.cornerAngleDeg(i - 1)
+                : null,
+            onCornerChanged: (deg) =>
+                onChanged(room.withCornerAngle(i - 1, deg)),
           ),
         ],
       ],
@@ -92,12 +99,20 @@ class _WallCard extends StatelessWidget {
     super.key,
     required this.index,
     required this.wall,
+    required this.roomCeilingMm,
     required this.onChanged,
+    required this.cornerAngleDeg,
+    required this.onCornerChanged,
   });
 
   final int index;
   final RoomWall wall;
+  final int roomCeilingMm;
   final ValueChanged<RoomWall> onChanged;
+
+  /// Null when this wall has no corner with the previous one.
+  final double? cornerAngleDeg;
+  final ValueChanged<double> onCornerChanged;
 
   void _setOpening(int j, RoomOpening o) =>
       onChanged(wall.copyWith(openings: [...wall.openings]..[j] = o));
@@ -146,6 +161,39 @@ class _WallCard extends StatelessWidget {
             value: wall.lengthMm,
             onChanged: (mm) => onChanged(wall.copyWith(lengthMm: mm)),
           ),
+          Gap(h: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: OptionalMmField(
+                  label: 'Ceiling, left',
+                  hint: '$roomCeilingMm',
+                  value: wall.heightMm,
+                  onChanged: (mm) =>
+                      onChanged(wall.withHeights(mm, wall.heightEndMm)),
+                ),
+              ),
+              Gap(w: 8),
+              Expanded(
+                child: OptionalMmField(
+                  label: 'Ceiling, right',
+                  hint: '${wall.heightMm ?? roomCeilingMm}',
+                  value: wall.heightEndMm,
+                  onChanged: (mm) =>
+                      onChanged(wall.withHeights(wall.heightMm, mm)),
+                ),
+              ),
+            ],
+          ),
+          if (cornerAngleDeg case final deg?) ...[
+            Gap(h: 12),
+            DegreesField(
+              label: 'Corner with ${wallName(index - 1)} (°)',
+              value: deg,
+              onChanged: onCornerChanged,
+            ),
+          ],
           for (var j = 0; j < wall.openings.length; j++) ...[
             Gap(h: 12),
             _OpeningRow(
@@ -178,6 +226,7 @@ class _OpeningRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sill = opening.sillMm;
+    final hasHeight = opening.type == .window || opening.type == .door;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -212,18 +261,41 @@ class _OpeningRow extends StatelessWidget {
                 onChanged: (mm) => onChanged(opening.copyWith(widthMm: mm)),
               ),
             ),
-            if (sill != null) ...[
-              Gap(w: 8),
-              Expanded(
-                child: MmField(
-                  label: 'Sill',
-                  value: sill,
-                  onChanged: (mm) => onChanged(opening.copyWith(sillMm: mm)),
-                ),
-              ),
-            ],
           ],
         ),
+        if (sill != null || hasHeight) ...[
+          Gap(h: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: sill != null
+                    ? MmField(
+                        label: 'Sill',
+                        value: sill,
+                        onChanged: (mm) =>
+                            onChanged(opening.copyWith(sillMm: mm)),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+              Gap(w: 8),
+              Expanded(
+                child: hasHeight
+                    ? OptionalMmField(
+                        label: 'Height',
+                        hint: 'Not measured',
+                        value: opening.heightMm,
+                        onChanged: (mm) => onChanged(
+                          mm == null
+                              ? opening.withoutHeight()
+                              : opening.copyWith(heightMm: mm),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }

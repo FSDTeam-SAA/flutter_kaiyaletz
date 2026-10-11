@@ -15,7 +15,8 @@ const openingColors = {
 
 /// Top-down sketch of the kitchen walls, with openings in colour.
 ///
-/// Walls are drawn in order: A runs right, B turns down, C turns left.
+/// Walls are drawn in order: A runs right, B turns down, C turns left. In
+/// a galley, B faces A across the aisle and runs left.
 class RoomPlanView extends StatelessWidget {
   const RoomPlanView({super.key, required this.room});
 
@@ -62,21 +63,33 @@ class _RoomPlanPainter extends CustomPainter {
   final RoomSpec room;
 
   // Right, down, left: the direction of wall A, B, C.
-  static const _dirs = [Offset(1, 0), Offset(0, 1), Offset(-1, 0)];
+  static const _cornerDirs = [Offset(1, 0), Offset(0, 1), Offset(-1, 0)];
+  static const _galleyDirs = [Offset(1, 0), Offset(-1, 0)];
+  // A galley's aisle isn't measured; this only spaces the sketch.
+  static const _galleyAisleMm = 1200.0;
   static const _pad = 28.0;
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Wall start points in mm.
-    final starts = <Offset>[Offset.zero];
+    final galley = !room.shape.hasCorners;
+    final dirs = galley ? _galleyDirs : _cornerDirs;
+    // Wall start and end points in mm.
+    final starts = <Offset>[], ends = <Offset>[];
     for (var i = 0; i < room.walls.length; i++) {
-      starts.add(starts[i] + _dirs[i] * room.walls[i].lengthMm.toDouble());
+      final start = i == 0
+          ? Offset.zero
+          : galley
+          ? Offset(ends[0].dx, _galleyAisleMm)
+          : ends[i - 1];
+      starts.add(start);
+      ends.add(start + dirs[i] * room.walls[i].lengthMm.toDouble());
     }
+    final points = [...starts, ...ends];
 
-    final minX = starts.map((p) => p.dx).reduce(min);
-    final maxX = starts.map((p) => p.dx).reduce(max);
-    final minY = starts.map((p) => p.dy).reduce(min);
-    final maxY = starts.map((p) => p.dy).reduce(max);
+    final minX = points.map((p) => p.dx).reduce(min);
+    final maxX = points.map((p) => p.dx).reduce(max);
+    final minY = points.map((p) => p.dy).reduce(min);
+    final maxY = points.map((p) => p.dy).reduce(max);
     final spanX = max(maxX - minX, 1.0);
     final spanY = max(maxY - minY, 1.0);
     final scale = min(
@@ -98,7 +111,7 @@ class _RoomPlanPainter extends CustomPainter {
 
     for (var i = 0; i < room.walls.length; i++) {
       final wall = room.walls[i];
-      final a = starts[i], b = starts[i + 1], dir = _dirs[i];
+      final a = starts[i], b = ends[i], dir = dirs[i];
       canvas.drawLine(toPx(a), toPx(b), wallPaint);
 
       for (final o in wall.openings) {

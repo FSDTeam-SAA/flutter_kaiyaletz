@@ -13,6 +13,7 @@ import '../models/layout_model.dart';
 // Drawing assumptions, in mm. The layout only stores horizontal positions.
 const _wallUnitBottomMm = 1450; // underside of hung units above the worktop
 const _worktopMm = 900;
+// Used when a door or window has no measured height.
 const _doorHeightMm = 2040;
 const _windowHeightMm = 1100;
 
@@ -78,8 +79,10 @@ double _heightFor(
   int wallIndex, {
   required double maxHeight,
 }) {
-  final scale = (width - _pad * 2) / room.walls[wallIndex].lengthMm;
-  return min(room.ceilingHeightMm * scale + _pad + _header, maxHeight);
+  final wall = room.walls[wallIndex];
+  final scale = (width - _pad * 2) / wall.lengthMm;
+  final ceiling = wall.highestCeilingMm(room.ceilingHeightMm);
+  return min(ceiling * scale + _pad + _header, maxHeight);
 }
 
 /// mm → px for one wall drawn into [size]: floor at the bottom, centred.
@@ -125,14 +128,21 @@ class ElevationPainter extends CustomPainter {
 
   RoomWall get _wall => room.walls[wallIndex];
 
+  /// Ceiling at the wall's left and right ends.
+  int get _ceilingStartMm => _wall.heightMm ?? room.ceilingHeightMm;
+  int get _ceilingEndMm => _wall.heightEndMm ?? _ceilingStartMm;
+
+  /// Taller end of the wall; the drawing is scaled to fit it.
+  int get _drawHeightMm => max(_ceilingStartMm, _ceilingEndMm);
+
   /// Bottom and height of an item, in mm from the floor.
-  (int, int) _band(LayoutItem i) => switch (i.tier) {
-    .wall => (
-      min(_wallUnitBottomMm, room.ceilingHeightMm - i.heightMm),
-      i.heightMm,
-    ),
-    _ => (0, min(i.heightMm, room.ceilingHeightMm)),
-  };
+  (int, int) _band(LayoutItem i) {
+    final ceiling = room.lowestCeilingMm(wallIndex);
+    return switch (i.tier) {
+      .wall => (min(_wallUnitBottomMm, ceiling - i.heightMm), i.heightMm),
+      _ => (0, min(i.heightMm, ceiling)),
+    };
+  }
 
   Iterable<int> get _indexes sync* {
     for (var n = 0; n < layout.items.length; n++) {
@@ -142,7 +152,7 @@ class ElevationPainter extends CustomPainter {
 
   /// Index of the item under [point], hung units checked first.
   int? itemAt(Size size, Offset point) {
-    final geo = _Geo(size, _wall.lengthMm, room.ceilingHeightMm);
+    final geo = _Geo(size, _wall.lengthMm, _drawHeightMm);
     final ordered = _indexes.toList()
       ..sort(
         (a, b) => (layout.items[a].tier == .wall ? 0 : 1).compareTo(
@@ -163,7 +173,7 @@ class ElevationPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final geo = _Geo(size, _wall.lengthMm, room.ceilingHeightMm);
+    final geo = _Geo(size, _wall.lengthMm, _drawHeightMm);
     final line = Paint()
       ..color = AppColors.textDark
       ..style = PaintingStyle.stroke
@@ -176,9 +186,14 @@ class ElevationPainter extends CustomPainter {
       AppTextStyles.caption,
     );
 
-    // Room outline: floor, walls ends, ceiling.
-    canvas.drawRect(
-      geo.rect(0, _wall.lengthMm, 0, room.ceilingHeightMm),
+    // Room outline: floor, wall ends, ceiling (sloped if measured so).
+    canvas.drawPath(
+      Path()
+        ..moveTo(geo.x(0), geo.y(0))
+        ..lineTo(geo.x(0), geo.y(_ceilingStartMm))
+        ..lineTo(geo.x(_wall.lengthMm), geo.y(_ceilingEndMm))
+        ..lineTo(geo.x(_wall.lengthMm), geo.y(0))
+        ..close(),
       line..color = AppColors.borderCard,
     );
 
@@ -193,7 +208,12 @@ class ElevationPainter extends CustomPainter {
       switch (o.type) {
         case .window:
           final sill = o.sillMm ?? _worktopMm;
-          final h = min(_windowHeightMm, room.ceilingHeightMm - sill - 100);
+          final h =
+              o.heightMm ??
+              min(
+                _windowHeightMm,
+                room.lowestCeilingMm(wallIndex) - sill - 100,
+              );
           final r = geo.rect(o.offsetMm, o.widthMm, sill, max(h, 100));
           canvas.drawRect(r, paint);
           canvas.drawRect(r, outline);
@@ -202,7 +222,8 @@ class ElevationPainter extends CustomPainter {
             o.offsetMm,
             o.widthMm,
             0,
-            min(_doorHeightMm, room.ceilingHeightMm - 50),
+            o.heightMm ??
+                min(_doorHeightMm, room.lowestCeilingMm(wallIndex) - 50),
           );
           // Outline plus a swing mark, so it doesn't read as a cabinet.
           canvas.drawRect(r, outline);
