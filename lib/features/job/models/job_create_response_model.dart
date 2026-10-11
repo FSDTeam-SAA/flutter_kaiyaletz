@@ -1,5 +1,8 @@
 import 'package:json_annotation/json_annotation.dart';
 
+import '../../measure/model/room_spec.dart';
+import 'layout_model.dart';
+
 part 'job_create_response_model.g.dart';
 
 @JsonSerializable(checked: true, disallowUnrecognizedKeys: true)
@@ -115,15 +118,24 @@ class RoomCapture {
   Map<String, dynamic> toJson() => _$RoomCaptureToJson(this);
 }
 
-@JsonSerializable(checked: true, disallowUnrecognizedKeys: true)
+@JsonSerializable(
+  checked: true,
+  disallowUnrecognizedKeys: true,
+  explicitToJson: true,
+)
 class Measurements {
+  /// Legacy box size in meters, derived by the backend from [room].
   final double? width;
 
   final double? depth;
 
   final double? height;
 
-  const Measurements({this.width, this.depth, this.height});
+  /// The walls the layout is built from. Null on jobs measured before
+  /// RoomSpec existed.
+  final RoomSpec? room;
+
+  const Measurements({this.width, this.depth, this.height, this.room});
 
   factory Measurements.fromJson(Map<String, dynamic> json) =>
       _$MeasurementsFromJson(json);
@@ -137,7 +149,10 @@ class AiLayout {
 
   final DateTime? generatedAt;
 
-  final dynamic layoutData;
+  /// Null until generated, after inputs change, and on jobs whose layout
+  /// predates the layout engine.
+  @JsonKey(fromJson: JobLayout.tryParse)
+  final JobLayout? layoutData;
 
   const AiLayout({this.status, this.generatedAt, this.layoutData});
 
@@ -155,7 +170,15 @@ class JobDesign {
   @JsonKey(required: true, disallowNullValue: true)
   final String layoutName;
 
-  const JobDesign({required this.layoutImage, required this.layoutName});
+  /// The generated layout as the user rearranged it. Null until saved.
+  @JsonKey(fromJson: JobLayout.tryParse)
+  final JobLayout? layout;
+
+  const JobDesign({
+    required this.layoutImage,
+    required this.layoutName,
+    this.layout,
+  });
 
   factory JobDesign.fromJson(Map<String, dynamic> json) =>
       _$JobDesignFromJson(json);
@@ -224,7 +247,16 @@ class Proposal {
   @JsonKey(required: true, disallowNullValue: true)
   final String terms;
 
-  const Proposal({this.generatedAt, required this.pdfUrl, required this.terms});
+  /// Private Cloudinary file id. The app downloads the PDF through
+  /// `GET /jobs/:id/proposal/pdf`, never by URL. Absent on older jobs.
+  final String? pdfPublicId;
+
+  const Proposal({
+    this.generatedAt,
+    required this.pdfUrl,
+    required this.terms,
+    this.pdfPublicId,
+  });
 
   factory Proposal.fromJson(Map<String, dynamic> json) =>
       _$ProposalFromJson(json);

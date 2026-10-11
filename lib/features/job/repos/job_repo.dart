@@ -1,8 +1,14 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart';
 import 'package:flutter_kaiyaletz/core/api/api_client.dart';
 import 'package:flutter_kaiyaletz/core/common/models/network_result.dart';
 import 'package:flutter_kaiyaletz/core/constants/api_constants.dart';
 import 'package:flutter_kaiyaletz/core/providers/core_provider.dart';
 import 'package:flutter_kaiyaletz/features/job/models/job_create_response_model.dart';
+import 'package:flutter_kaiyaletz/features/job/models/layout_model.dart';
+import 'package:flutter_kaiyaletz/features/measure/model/room_spec.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/single_job_reponse_model.dart';
@@ -50,9 +56,7 @@ abstract class JobRepo {
   // Step 3
   NetworkResult<Map<String, dynamic>> saveMeasurements({
     required String jobId,
-    required num width,
-    required num depth,
-    required num height,
+    required RoomSpec room,
   });
 
   // Step 4
@@ -64,12 +68,12 @@ abstract class JobRepo {
   // Step 5 (no body)
   NetworkResult<Map<String, dynamic>> generateAILayout({required String jobId});
 
-  // Step 6 (multipart)
-  // NetworkResult<Map<String, dynamic>> saveDesign({
-  //   required String jobId,
-  //   String? layoutName,
-  //   File? layoutImage,
-  // });
+  // Step 6 (multipart): the rearranged layout plus its elevation PNG.
+  NetworkResult<Map<String, dynamic>> saveDesign({
+    required String jobId,
+    required JobLayout layout,
+    Uint8List? layoutPng,
+  });
 
   // Step 7
   NetworkResult<Map<String, dynamic>> saveEstimate({
@@ -83,6 +87,12 @@ abstract class JobRepo {
   NetworkResult<Map<String, dynamic>> generateProposal({
     required String jobId,
     String? terms,
+  });
+
+  // Step 8: saves the private proposal PDF to [savePath]. Generate first.
+  NetworkResult<String> downloadProposalPdf({
+    required String jobId,
+    required String savePath,
   });
 
   // Add a catalog product to a job
@@ -163,13 +173,11 @@ class JobRepoImpl implements JobRepo {
   @override
   NetworkResult<Map<String, dynamic>> saveMeasurements({
     required String jobId,
-    required num width,
-    required num depth,
-    required num height,
+    required RoomSpec room,
   }) {
     return apiClient.patch<Map<String, dynamic>>(
       endpoint: ApiConstants.job.saveMeasurements(jobId),
-      data: {'width': width, 'depth': depth, 'height': height},
+      data: {'room': room.toJson()},
       fromJsonT: (json) => json,
     );
   }
@@ -196,28 +204,31 @@ class JobRepoImpl implements JobRepo {
     );
   }
 
-  // @override
-  // NetworkResult<Map<String, dynamic>> saveDesign({
-  //   required String jobId,
-  //   String? layoutName,
-  //   File? layoutImage,
-  // }) async {
-  //   // Field name must be exactly "layoutImage" (multer upload.single).
-  //   final form = FormData.fromMap({
-  //     'layoutName': ?layoutName,
-  //     if (layoutImage != null)
-  //       'layoutImage': await MultipartFile.fromFile(
-  //         layoutImage.path,
-  //         filename: layoutImage.path.split('/').last,
-  //       ),
-  //   });
+  @override
+  NetworkResult<Map<String, dynamic>> saveDesign({
+    required String jobId,
+    required JobLayout layout,
+    Uint8List? layoutPng,
+  }) {
+    // Multipart, so the layout travels as a JSON string. The backend only
+    // reads positions from it. File field must be exactly "layoutImage"
+    // (multer upload.single).
+    final form = FormData.fromMap({
+      'layout': jsonEncode(layout.toJson()),
+      if (layoutPng != null)
+        'layoutImage': MultipartFile.fromBytes(
+          layoutPng,
+          filename: 'layout.png',
+          contentType: DioMediaType('image', 'png'),
+        ),
+    });
 
-  //   return apiClient.patch<Map<String, dynamic>>(
-  //     endpoint: ApiConstants.job.saveDesign(jobId),
-  //     data: form,
-  //     fromJsonT: (json) => json,
-  //   );
-  // }
+    return apiClient.patch<Map<String, dynamic>>(
+      endpoint: ApiConstants.job.saveDesign(jobId),
+      formData: form,
+      fromJsonT: (json) => json,
+    );
+  }
 
   @override
   NetworkResult<Map<String, dynamic>> saveEstimate({
@@ -246,6 +257,17 @@ class JobRepoImpl implements JobRepo {
       endpoint: ApiConstants.job.generateProposal(jobId),
       data: {if (terms != null && terms.isNotEmpty) 'terms': terms},
       fromJsonT: (json) => json,
+    );
+  }
+
+  @override
+  NetworkResult<String> downloadProposalPdf({
+    required String jobId,
+    required String savePath,
+  }) {
+    return apiClient.downloadFile(
+      endpoint: ApiConstants.job.proposalPdf(jobId),
+      savePath: savePath,
     );
   }
 

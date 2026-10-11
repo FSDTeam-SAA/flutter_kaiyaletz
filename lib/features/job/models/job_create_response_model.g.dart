@@ -158,11 +158,16 @@ Map<String, dynamic> _$RoomCaptureToJson(RoomCapture instance) =>
 
 Measurements _$MeasurementsFromJson(Map<String, dynamic> json) =>
     $checkedCreate('Measurements', json, ($checkedConvert) {
-      $checkKeys(json, allowedKeys: const ['width', 'depth', 'height']);
+      $checkKeys(json, allowedKeys: const ['width', 'depth', 'height', 'room']);
       final val = Measurements(
         width: $checkedConvert('width', (v) => (v as num?)?.toDouble()),
         depth: $checkedConvert('depth', (v) => (v as num?)?.toDouble()),
         height: $checkedConvert('height', (v) => (v as num?)?.toDouble()),
+        room: $checkedConvert(
+          'room',
+          (v) =>
+              v == null ? null : RoomSpec.fromJson(v as Map<String, dynamic>),
+        ),
       );
       return val;
     });
@@ -172,6 +177,7 @@ Map<String, dynamic> _$MeasurementsToJson(Measurements instance) =>
       'width': instance.width,
       'depth': instance.depth,
       'height': instance.height,
+      'room': instance.room?.toJson(),
     };
 
 AiLayout _$AiLayoutFromJson(Map<String, dynamic> json) =>
@@ -186,7 +192,7 @@ AiLayout _$AiLayoutFromJson(Map<String, dynamic> json) =>
           'generatedAt',
           (v) => v == null ? null : DateTime.parse(v as String),
         ),
-        layoutData: $checkedConvert('layoutData', (v) => v),
+        layoutData: $checkedConvert('layoutData', (v) => JobLayout.tryParse(v)),
       );
       return val;
     });
@@ -201,7 +207,7 @@ JobDesign _$JobDesignFromJson(Map<String, dynamic> json) =>
     $checkedCreate('JobDesign', json, ($checkedConvert) {
       $checkKeys(
         json,
-        allowedKeys: const ['layoutImage', 'layoutName'],
+        allowedKeys: const ['layoutImage', 'layoutName', 'layout'],
         requiredKeys: const ['layoutImage', 'layoutName'],
         disallowNullValues: const ['layoutImage', 'layoutName'],
       );
@@ -211,6 +217,7 @@ JobDesign _$JobDesignFromJson(Map<String, dynamic> json) =>
           (v) => LayoutImage.fromJson(v as Map<String, dynamic>),
         ),
         layoutName: $checkedConvert('layoutName', (v) => v as String),
+        layout: $checkedConvert('layout', (v) => JobLayout.tryParse(v)),
       );
       return val;
     });
@@ -218,6 +225,7 @@ JobDesign _$JobDesignFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$JobDesignToJson(JobDesign instance) => <String, dynamic>{
   'layoutImage': instance.layoutImage,
   'layoutName': instance.layoutName,
+  'layout': instance.layout,
 };
 
 LayoutImage _$LayoutImageFromJson(Map<String, dynamic> json) =>
@@ -297,7 +305,7 @@ Proposal _$ProposalFromJson(Map<String, dynamic> json) =>
     $checkedCreate('Proposal', json, ($checkedConvert) {
       $checkKeys(
         json,
-        allowedKeys: const ['generatedAt', 'pdfUrl', 'terms'],
+        allowedKeys: const ['generatedAt', 'pdfUrl', 'terms', 'pdfPublicId'],
         requiredKeys: const ['pdfUrl', 'terms'],
         disallowNullValues: const ['pdfUrl', 'terms'],
       );
@@ -308,6 +316,7 @@ Proposal _$ProposalFromJson(Map<String, dynamic> json) =>
         ),
         pdfUrl: $checkedConvert('pdfUrl', (v) => v as String),
         terms: $checkedConvert('terms', (v) => v as String),
+        pdfPublicId: $checkedConvert('pdfPublicId', (v) => v as String?),
       );
       return val;
     });
@@ -316,4 +325,5 @@ Map<String, dynamic> _$ProposalToJson(Proposal instance) => <String, dynamic>{
   'generatedAt': instance.generatedAt?.toIso8601String(),
   'pdfUrl': instance.pdfUrl,
   'terms': instance.terms,
+  'pdfPublicId': instance.pdfPublicId,
 };

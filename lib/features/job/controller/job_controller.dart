@@ -1,11 +1,16 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter_kaiyaletz/core/utils/app_snackbar.dart';
 import 'package:flutter_kaiyaletz/core/utils/d_print.dart';
 import 'package:flutter_kaiyaletz/core/utils/navigation.dart';
 import 'package:flutter_kaiyaletz/features/job/models/job_create_response_model.dart';
+import 'package:flutter_kaiyaletz/features/job/models/layout_model.dart';
+import 'package:flutter_kaiyaletz/features/job/models/proposal_model.dart';
 import 'package:flutter_kaiyaletz/features/job/repos/job_repo.dart';
 import 'package:flutter_kaiyaletz/features/job/screens/job_pogress_screen.dart';
+import 'package:flutter_kaiyaletz/features/job/widgets/elevation_view.dart';
+import 'package:flutter_kaiyaletz/features/measure/model/room_spec.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/single_job_reponse_model.dart';
@@ -39,6 +44,23 @@ class JobState {
 
   final Map<String, int> selectedQty;
 
+  /// Room being captured/edited in steps 2–3. Saved on Measurements → Continue.
+  final RoomSpec? roomDraft;
+
+  /// Cabinet placement: the saved design if there is one, else the
+  /// generated layout. Rearranged in step 6. Cleared when the walls or
+  /// products it was built from are saved again.
+  final JobLayout? layout;
+  final bool isGeneratingLayout;
+
+  /// Estimate step inputs, saved on Estimate → Continue.
+  final double installationCharge;
+  final double deliveryCharge;
+
+  /// Built by the backend; also the source of the PDF.
+  final ProposalModel? proposal;
+  final bool isLoadingProposal;
+
   final String search;
   final String? status;
   final int page;
@@ -55,6 +77,13 @@ class JobState {
     this.jobStepTitle = '',
     this.currentStep,
     this.selectedQty = const {},
+    this.roomDraft,
+    this.layout,
+    this.isGeneratingLayout = false,
+    this.installationCharge = 0,
+    this.deliveryCharge = 0,
+    this.proposal,
+    this.isLoadingProposal = false,
 
     this.search = '',
     this.status,
@@ -77,6 +106,16 @@ class JobState {
     int? currentStep,
 
     Map<String, int>? selectedQty,
+    RoomSpec? roomDraft,
+    bool clearRoomDraft = false,
+    JobLayout? layout,
+    bool clearLayout = false,
+    bool? isGeneratingLayout,
+    double? installationCharge,
+    double? deliveryCharge,
+    ProposalModel? proposal,
+    bool clearProposal = false,
+    bool? isLoadingProposal,
 
     String? search,
     String? status,
@@ -92,6 +131,13 @@ class JobState {
       jobStepTitle: jobStepTitle ?? this.jobStepTitle,
       currentStep: currentStep ?? this.currentStep,
       selectedQty: selectedQty ?? this.selectedQty,
+      roomDraft: clearRoomDraft ? null : (roomDraft ?? this.roomDraft),
+      layout: clearLayout ? null : (layout ?? this.layout),
+      isGeneratingLayout: isGeneratingLayout ?? this.isGeneratingLayout,
+      installationCharge: installationCharge ?? this.installationCharge,
+      deliveryCharge: deliveryCharge ?? this.deliveryCharge,
+      proposal: clearProposal ? null : (proposal ?? this.proposal),
+      isLoadingProposal: isLoadingProposal ?? this.isLoadingProposal,
       search: search ?? this.search,
       status: clearStatus ? null : (status ?? this.status),
       page: page ?? this.page,
@@ -221,11 +267,24 @@ class JobController extends Notifier<JobState> {
       },
       (s) {
         final step = s.data.currentStep.clamp(1, jobStepNames.length);
+        final layout = s.data.design?.layout ?? s.data.aiLayout?.layoutData;
 
         state = state.copyWith(
           singleJob: s.data,
           currentStep: step,
           jobStepTitle: jobStepNames[step - 1],
+          roomDraft: s.data.measurements?.room,
+          clearRoomDraft: s.data.measurements?.room == null,
+          selectedQty: {
+            for (final p in s.data.selectedProducts ?? const [])
+              p.productId.id: p.quantity,
+          },
+          layout: layout,
+          clearLayout: layout == null,
+          installationCharge:
+              s.data.estimate?.installationCharge.toDouble() ?? 0,
+          deliveryCharge: s.data.estimate?.deliveryCharge.toDouble() ?? 0,
+          clearProposal: true,
           isJobLoading: false,
         );
 
@@ -245,6 +304,237 @@ class JobController extends Notifier<JobState> {
   void nextStep() => goToStep((state.currentStep ?? 1) + 1);
   void previousStep() => goToStep((state.currentStep ?? 1) - 1);
 
+  /// Bottom-bar Continue: saves the current step when it has data, then
+  /// advances. Stays on the step if saving fails.
+  Future<void> continueStep() async {
+    final ok = switch (state.currentStep) {
+      2 => await _saveRoomCapture(),
+      3 => await _saveMeasurements(),
+      4 => await _saveSelectedProducts(),
+      5 => _hasLayout(),
+      6 => await _saveDesign(),
+      7 => await _saveEstimate(),
+      _ => true,
+    };
+    if (ok) nextStep();
+  }
+
+  void setRoomDraft(RoomSpec room) => state = state.copyWith(roomDraft: room);
+
+  Future<bool> _saveRoomCapture() async {
+    final room = state.roomDraft;
+    final jobId = state.singleJob?.id;
+    if (room == null) {
+      AppSnackbar.warning('Choose how to capture the room');
+      return false;
+    }
+    if (jobId == null) return false;
+
+    final result = await ref
+        .read(jobRepo)
+        .saveRoomCapture(
+          jobId: jobId,
+          method: room.source == .manual ? 'Manual' : 'Room Scan',
+        );
+    return result.fold((f) {
+      AppSnackbar.error(f.message);
+      return false;
+    }, (_) => true);
+  }
+
+  Future<bool> _saveMeasurements() async {
+    final room = state.roomDraft;
+    final jobId = state.singleJob?.id;
+    if (room == null) {
+      AppSnackbar.warning('Capture the room first');
+      return false;
+    }
+    if (jobId == null) return false;
+
+    final errors = room.validate();
+    if (errors.isNotEmpty) {
+      AppSnackbar.warning(errors.first);
+      return false;
+    }
+
+    final result = await ref
+        .read(jobRepo)
+        .saveMeasurements(jobId: jobId, room: room);
+    return result.fold((f) {
+      AppSnackbar.error(f.message);
+      return false;
+    }, (_) => _inputsChanged());
+  }
+
+  Future<bool> _saveSelectedProducts() async {
+    final jobId = state.singleJob?.id;
+    if (state.selectedQty.isEmpty) {
+      AppSnackbar.warning('Select at least one product');
+      return false;
+    }
+    if (jobId == null) return false;
+
+    final result = await ref
+        .read(jobRepo)
+        .saveSelectedProducts(
+          jobId: jobId,
+          products: [
+            for (final MapEntry(key: id, value: qty)
+                in state.selectedQty.entries)
+              SelectedProductInput(productId: id, quantity: qty),
+          ],
+        );
+    return result.fold((f) {
+      AppSnackbar.error(f.message);
+      return false;
+    }, (_) => _inputsChanged());
+  }
+
+  /// The backend drops the layout when walls or products change; match it.
+  bool _inputsChanged() {
+    state = state.copyWith(clearLayout: true);
+    return true;
+  }
+
+  bool _hasLayout() {
+    if (state.layout != null) return true;
+    AppSnackbar.warning('Generate the layout first');
+    return false;
+  }
+
+  /// Design step: swaps cabinet [index] with its neighbour in direction
+  /// [dir] (-1 left, +1 right). Returns false if that move isn't allowed.
+  bool moveItem(int index, int dir) {
+    final room = state.roomDraft;
+    final next = room == null
+        ? null
+        : state.layout?.swapWithNeighbour(room, index, dir);
+    if (next == null) return false;
+    state = state.copyWith(layout: next);
+    return true;
+  }
+
+  /// Sends the rearranged layout plus an elevation PNG for the proposal.
+  /// The backend re-checks it and returns it with fillers and checks rebuilt.
+  Future<bool> _saveDesign() async {
+    final room = state.roomDraft;
+    final layout = state.layout;
+    final jobId = state.singleJob?.id;
+    if (room == null || layout == null) {
+      AppSnackbar.warning('Generate the layout first');
+      return false;
+    }
+    if (jobId == null) return false;
+
+    Uint8List? png;
+    try {
+      png = await renderElevationPng(room, layout);
+    } catch (e) {
+      // The design is still worth saving; the proposal just lacks a drawing.
+      DPrint.error('Elevation PNG failed: $e');
+    }
+
+    final result = await ref
+        .read(jobRepo)
+        .saveDesign(jobId: jobId, layout: layout, layoutPng: png);
+    return result.fold(
+      (f) {
+        AppSnackbar.error(f.message);
+        return false;
+      },
+      (s) {
+        final saved = JobLayout.tryParse(s.data['design']?['layout']);
+        if (saved != null) state = state.copyWith(layout: saved);
+        final failed = saved?.checks.where((c) => !c.passed) ?? const [];
+        if (failed.isNotEmpty) {
+          AppSnackbar.warning(failed.map((c) => c.label).join(' · '));
+        }
+        return true;
+      },
+    );
+  }
+
+  void setCharges({double? installation, double? delivery}) => state = state
+      .copyWith(installationCharge: installation, deliveryCharge: delivery);
+
+  Future<bool> _saveEstimate() async {
+    final jobId = state.singleJob?.id;
+    if (jobId == null) return false;
+
+    final result = await ref
+        .read(jobRepo)
+        .saveEstimate(
+          jobId: jobId,
+          installationCharge: state.installationCharge,
+          deliveryCharge: state.deliveryCharge,
+          taxRate: state.singleJob?.estimate?.taxRate ?? 10,
+        );
+    return result.fold(
+      (f) {
+        AppSnackbar.error(f.message);
+        return false;
+      },
+      (_) {
+        state = state.copyWith(clearProposal: true);
+        return true;
+      },
+    );
+  }
+
+  /// Asks the backend for the proposal. It rebuilds the PDF only when
+  /// something on it changed, so calling this on every visit is cheap.
+  Future<void> loadProposal() async {
+    final jobId = state.singleJob?.id;
+    if (jobId == null || state.isLoadingProposal) return;
+
+    state = state.copyWith(isLoadingProposal: true);
+    final result = await ref.read(jobRepo).generateProposal(jobId: jobId);
+
+    result.fold(
+      (f) {
+        state = state.copyWith(isLoadingProposal: false);
+        AppSnackbar.error(f.message);
+      },
+      (s) {
+        ProposalModel? proposal;
+        try {
+          proposal = ProposalModel.fromJson(
+            s.data['proposal'] as Map<String, dynamic>,
+          );
+        } catch (e) {
+          DPrint.error('Proposal parse failed: $e');
+        }
+        state = state.copyWith(proposal: proposal, isLoadingProposal: false);
+        if (proposal == null) AppSnackbar.error('Could not read the proposal');
+      },
+    );
+  }
+
+  /// Runs the backend layout engine for the saved walls and products.
+  Future<void> generateLayout() async {
+    final jobId = state.singleJob?.id;
+    if (jobId == null || state.isGeneratingLayout) return;
+
+    state = state.copyWith(isGeneratingLayout: true);
+    final result = await ref.read(jobRepo).generateAILayout(jobId: jobId);
+
+    result.fold(
+      (f) {
+        state = state.copyWith(isGeneratingLayout: false);
+        AppSnackbar.error(f.message);
+      },
+      (s) {
+        final layout = JobLayout.tryParse(s.data['aiLayout']?['layoutData']);
+        state = state.copyWith(
+          layout: layout,
+          clearLayout: layout == null,
+          isGeneratingLayout: false,
+        );
+        if (layout == null) AppSnackbar.error('Could not read the layout');
+      },
+    );
+  }
+
   void toggleProduct(String id) {
     final next = Map<String, int>.from(state.selectedQty);
     if (next.containsKey(id)) {
@@ -259,25 +549,5 @@ class JobController extends Notifier<JobState> {
     if (!state.selectedQty.containsKey(id)) return;
     if (qty < 1) return;
     state = state.copyWith(selectedQty: {...state.selectedQty, id: qty});
-  }
-
-  Future<void> saveSelectedProducts({
-    required String jobId,
-    required List<SelectedProductInput> products,
-  }) async {
-    state = state.copyWith(isJobLoading: true);
-    final result = await ref
-        .read(jobRepo)
-        .saveSelectedProducts(jobId: jobId, products: products);
-
-    result.fold(
-      (f) {
-        state = state.copyWith(isJobLoading: false);
-        AppSnackbar.info(f.message);
-      },
-      (r) {
-        // state = state.copyWith(isJobLoading: false);
-      },
-    );
   }
 }

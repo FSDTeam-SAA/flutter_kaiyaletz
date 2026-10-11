@@ -543,6 +543,67 @@ class ApiClient {
   // Public HTTP verbs
   // ---------------------------------------------------------------------
 
+  /// GETs a binary file (e.g. a PDF) from our API into [savePath], with
+  /// the same auth and refresh handling as [get]. Succeeds with the path.
+  Future<Either<NetworkFailure, NetworkSuccess<String>>> downloadFile({
+    required String endpoint,
+    required String savePath,
+    bool isRetry = false,
+  }) async {
+    final connectivity = await _checkConnectivity();
+    if (connectivity.isLeft()) return const Left(NoInternetFailure());
+
+    try {
+      if (_isRefreshing) {
+        final completer = Completer<void>();
+        _pendingRequests.add(completer);
+        await completer.future;
+      }
+
+      final options = await _addAuthHeader(null);
+      _logRequest(method: 'GET', endpoint: endpoint);
+      final response = await dio.download(endpoint, savePath, options: options);
+      return Right(
+        NetworkSuccess<String>(
+          data: savePath,
+          message: 'Downloaded',
+          statusCode: response.statusCode ?? 200,
+        ),
+      );
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 401 && !_isRefreshing && !isRetry) {
+        _isRefreshing = true;
+        try {
+          if (await _refreshToken()) {
+            return downloadFile(
+              endpoint: endpoint,
+              savePath: savePath,
+              isRetry: true,
+            );
+          }
+        } finally {
+          _isRefreshing = false;
+          for (final completer in _pendingRequests) {
+            completer.complete();
+          }
+          _pendingRequests.clear();
+        }
+      }
+      _logApiError(
+        method: 'GET',
+        endpoint: endpoint,
+        error: error,
+        statusCode: error.response?.statusCode,
+      );
+      return Left(_handleDioError(error));
+    } catch (e) {
+      _logApiError(method: 'GET', endpoint: endpoint, error: e);
+      return const Left(
+        UnknownFailure(message: 'An unexpected error occurred'),
+      );
+    }
+  }
+
   Future<Either<NetworkFailure, NetworkSuccess<T>>> get<T>({
     required String endpoint,
     Map<String, dynamic>? queryParameters,

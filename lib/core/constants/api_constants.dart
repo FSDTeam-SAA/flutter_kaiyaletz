@@ -3,8 +3,8 @@
 class ApiConstants {
   ApiConstants._();
 
-  static const String baseDomain = 'http://187.77.187.56:5001'; // [OV]
-  // static const String baseDomain = 'http://localhost:5001'; // [Home]
+  // static const String baseDomain = 'http://187.77.187.56:5001'; // [OV]
+  static const String baseDomain = 'http://192.168.10.143:5001'; // [Home]
 
   static const String baseUrl = '$baseDomain/api/v1';
 
@@ -93,8 +93,10 @@ class JobEndpoints {
   String saveMeasurements(String id) => "$_base$id/measurements";
   String saveSelectedProducts(String id) => "$_base$id/products";
   String generateAILayout(String id) => "$_base$id/ai-layout";
+  String saveDesign(String id) => "$_base$id/design";
   String saveEstimate(String id) => "$_base$id/estimate";
   String generateProposal(String id) => "$_base$id/proposal";
+  String proposalPdf(String id) => "$_base$id/proposal/pdf";
 }
 
 class CatalogEndpoint {

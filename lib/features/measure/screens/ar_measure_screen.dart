@@ -171,7 +171,7 @@ class _ArMeasureScreenState extends State<ArMeasureScreen> {
               else
                 _chip(
                   _state.tracking
-                      ? 'Tap Pin to place the first point'
+                      ? 'Pin the first kitchen corner where wall meets floor'
                       : 'Move the phone slowly to find a surface',
                 ),
               const Spacer(),

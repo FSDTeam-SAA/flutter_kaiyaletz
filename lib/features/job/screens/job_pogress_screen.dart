@@ -1,9 +1,11 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_kaiyaletz/core/common/widgets/widgets.dart';
+import 'package:flutter_kaiyaletz/core/utils/app_snackbar.dart';
 import 'package:flutter_kaiyaletz/core/utils/d_print.dart';
 import 'package:flutter_kaiyaletz/features/job/controller/job_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../widgets/proposal_view.dart';
 import 'job_steps_screen.dart';
 
 class JobPogressScreen extends ConsumerWidget {
@@ -42,12 +44,24 @@ class JobPogressScreen extends ConsumerWidget {
       bottomBar: BottomActionBar(
         label: hasNext
             ? "Continue to ${jobStepNames[currentStep]}"
-            : "Download PDF",
-        onSimplePressed: hasNext
-            ? () {
-                ref.read(jobProvider.notifier).nextStep();
-              }
-            : null,
+            : "Download",
+        onAsyncPressed: hasNext
+            ? () => ref.read(jobProvider.notifier).continueStep()
+            : () async {
+                final state = ref.read(jobProvider);
+                final proposal = state.proposal;
+                final jobId = state.singleJob?.id;
+                if (proposal == null || jobId == null) {
+                  AppSnackbar.warning('The proposal is still being prepared');
+                  return;
+                }
+                await showProposalDownloadSheet(
+                  context,
+                  ref,
+                  jobId: jobId,
+                  proposal: proposal,
+                );
+              },
       ),
     );
   }
