@@ -125,6 +125,15 @@ class AppColors {
   /// MiniStepProgress in job cards: Home, All Jobs.
   static const progressEmpty = Color(0xFFD9D9D9);
 
+  /// #000000 @ 25% opacity. Backdrop behind the web auth card and behind
+  /// modal dialogs/bottom sheets (AppDialogs.confirm's `barrierColor`).
+  /// Use [overlayLight] instead for drawers/side-panel scrims.
+  static const overlay = Color(0x40000000);
+
+  /// #000000 @ 15% opacity. Lighter scrim for drawers/side panels
+  /// (web Import Product, Product Details).
+  static const overlayLight = Color(0x26000000);
+
   // ===========================================================================
   // TEXT
   // ===========================================================================
@@ -246,4 +255,51 @@ class AppColors {
   /// "Completed" status (Home, All Jobs), "Added" label (Catalog Add),
   /// check icons (Catalog Add, Continue to Room Captured).
   static const success = Color(0xFF10B769);
+
+  // ===========================================================================
+  // COMPONENT COLORS (added for the reusable widgets)
+  // ===========================================================================
+
+  /// #FF4B26. Mobile destructive red: "Delete Account" button & text
+  /// (Delete Account, General Settings) and the Log out button (Settings).
+  /// Used by AppDangerButton and text-field error borders.
+  static const danger = Color(0xFFFF4B26);
+
+  /// #F6F6F6. Border of the white cards on Settings, General Settings,
+  /// Notification settings (SettingsGroup, SettingsProfileCard).
+  static const borderLight = Color(0xFFF6F6F6);
+
+  /// #F0F0F0. Divider between SettingsTile rows.
+  static const dividerLight = Color(0xFFF0F0F0);
+
+  /// #E6E6E6. SummaryCard background (Estimate: Sub Total / Tax / Total).
+  static const surfaceGrey = Color(0xFFE6E6E6);
+
+  /// #D7D7D7. Divider above "Total" in SummaryCard and between
+  /// Estimate table rows.
+  static const dividerGrey = Color(0xFFD7D7D7);
+
+  /// #F3F3F3. Image placeholder / layout preview background
+  /// (Measurements, Ai Layout, ProductCard without image).
+  static const surfaceImage = Color(0xFFF3F3F3);
+
+  /// #333333. SummaryRow labels ("Sub Total", "Tax(10%)", "Total").
+  static const textLabel = Color(0xFF333333);
+
+  /// #111111. SettingsTile labels ("Edit Profile", "General Settings"…).
+  static const textTile = Color(0xFF111111);
+
+  /// #292D32. Settings profile card name ("Smith Josh").
+  static const textProfileName = Color(0xFF292D32);
+
+  /// #696969. Chevron arrows on SettingsTile and profile email.
+  static const iconMuted = Color(0xFF696969);
+
+  /// #F6F6F6. Unselected product row fill (Select Product screen,
+  /// ProductSelectTile).
+  static const surfaceOption = Color(0xFFF6F6F6);
+
+  /// #F0DCC4. Selected product row fill (Select Product screen,
+  /// ProductSelectTile).
+  static const surfaceOptionSelected = Color(0xFFF0DCC4);
 }

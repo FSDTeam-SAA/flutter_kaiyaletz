@@ -14,83 +14,157 @@ class AppTextStyles {
 
   // ---- Headings: Playfair Display ----
   static const TextStyle display = TextStyle(
-      fontFamily: AppFonts.heading,
-      fontSize: 30, fontWeight: FontWeight.w400, height: 36 / 30,
-      letterSpacing: -0.8, color: AppColors.textWarmDark);
+    fontFamily: AppFonts.heading,
+    fontSize: 30,
+    fontWeight: .w400,
+    height: 36 / 30,
+    letterSpacing: -0.8,
+    color: AppColors.textWarmDark,
+  );
 
   static const TextStyle h1 = TextStyle(
-      fontFamily: AppFonts.heading,
-      fontSize: 24, fontWeight: FontWeight.w600, height: 1.2,
-      color: AppColors.textPrimary);
+    fontFamily: AppFonts.heading,
+    fontSize: 24,
+    fontWeight: .w600,
+    height: 1.2,
+    color: AppColors.textPrimary,
+  );
 
   static const TextStyle h2 = TextStyle(
-      fontFamily: AppFonts.heading,
-      fontSize: 20, fontWeight: FontWeight.w600, height: 1.2,
-      color: AppColors.textDark);
+    fontFamily: AppFonts.heading,
+    fontSize: 20,
+    fontWeight: .w600,
+    height: 1.2,
+    color: AppColors.textDark,
+  );
 
   // ---- Body / UI: DM Sans ----
   static const TextStyle priceLarge = TextStyle(
-      fontFamily: AppFonts.body,
-      fontSize: 24, fontWeight: FontWeight.w600, height: 1.2, color: AppColors.primary);
+    fontFamily: AppFonts.body,
+    fontSize: 24,
+    fontWeight: .w600,
+    height: 1.2,
+    color: AppColors.primary,
+  );
 
   static const TextStyle statValue = TextStyle(
-      fontFamily: AppFonts.body,
-      fontSize: 20, fontWeight: FontWeight.w600, height: 1.2, color: AppColors.textPrimary);
+    fontFamily: AppFonts.body,
+    fontSize: 20,
+    fontWeight: .w600,
+    height: 1.2,
+    color: AppColors.textPrimary,
+  );
 
   static const TextStyle listTitle = TextStyle(
-      fontFamily: AppFonts.body,
-      fontSize: 18, fontWeight: FontWeight.w600, height: 1.2, color: AppColors.textNavy);
+    fontFamily: AppFonts.body,
+    fontSize: 18,
+    fontWeight: .w600,
+    height: 1.2,
+    color: AppColors.textNavy,
+  );
 
   static const TextStyle button = TextStyle(
-      fontFamily: AppFonts.body,
-      fontSize: 16, fontWeight: FontWeight.w500, height: 1.2, color: AppColors.onPrimary);
+    fontFamily: AppFonts.body,
+    fontSize: 16,
+    fontWeight: .w500,
+    height: 1.2,
+    color: AppColors.onPrimary,
+  );
 
   static const TextStyle inputLabel = TextStyle(
-      fontFamily: AppFonts.body,
-      fontSize: 16, fontWeight: FontWeight.w500, height: 1.2, color: AppColors.textPrimary);
+    fontFamily: AppFonts.body,
+    fontSize: 16,
+    fontWeight: .w500,
+    height: 1.2,
+    color: AppColors.textPrimary,
+  );
 
   static const TextStyle placeholder = TextStyle(
-      fontFamily: AppFonts.body,
-      fontSize: 16, fontWeight: FontWeight.w400, height: 1.2, color: AppColors.textPlaceholder);
+    fontFamily: AppFonts.body,
+    fontSize: 16,
+    fontWeight: .w400,
+    height: 1.2,
+    color: AppColors.textPlaceholder,
+  );
 
   static const TextStyle bodyLarge = TextStyle(
-      fontFamily: AppFonts.body,
-      fontSize: 16, fontWeight: FontWeight.w400, height: 1.2, color: AppColors.textSecondary);
+    fontFamily: AppFonts.body,
+    fontSize: 16,
+    fontWeight: .w400,
+    height: 1.2,
+    color: AppColors.textSecondary,
+  );
 
   static const TextStyle productName = TextStyle(
-      fontFamily: AppFonts.body,
-      fontSize: 14, fontWeight: FontWeight.w600, height: 1.2, color: AppColors.textNavy);
+    fontFamily: AppFonts.body,
+    fontSize: 14,
+    fontWeight: .w600,
+    height: 1.2,
+    color: AppColors.textNavy,
+  );
 
   static const TextStyle productPrice = TextStyle(
-      fontFamily: AppFonts.body,
-      fontSize: 14, fontWeight: FontWeight.w600, height: 1.2, color: AppColors.primary);
+    fontFamily: AppFonts.body,
+    fontSize: 14,
+    fontWeight: .w600,
+    height: 1.2,
+    color: AppColors.primary,
+  );
 
   static const TextStyle overline = TextStyle(
-      fontFamily: AppFonts.body,
-      fontSize: 14, fontWeight: FontWeight.w500, height: 20 / 14,
-      letterSpacing: 0.3, color: AppColors.textWarmMuted); // apply .toUpperCase() to text
+    fontFamily: AppFonts.body,
+    fontSize: 14,
+    fontWeight: .w500,
+    height: 20 / 14,
+    letterSpacing: 0.3,
+    color: AppColors.textWarmMuted,
+  ); // apply .toUpperCase() to text
 
   static const TextStyle bodyMedium = TextStyle(
-      fontFamily: AppFonts.body,
-      fontSize: 14, fontWeight: FontWeight.w400, height: 1.2, color: AppColors.textMeta);
+    fontFamily: AppFonts.body,
+    fontSize: 14,
+    fontWeight: .w400,
+    height: 1.2,
+    color: AppColors.textMeta,
+  );
 
   static const TextStyle bodySmall = TextStyle(
-      fontFamily: AppFonts.body,
-      fontSize: 12, fontWeight: FontWeight.w400, height: 1.2, color: AppColors.textMeta);
+    fontFamily: AppFonts.body,
+    fontSize: 12,
+    fontWeight: .w400,
+    height: 1.2,
+    color: AppColors.textMeta,
+  );
 
   static const TextStyle link = TextStyle(
-      fontFamily: AppFonts.body,
-      fontSize: 12, fontWeight: FontWeight.w400, height: 1.2, color: AppColors.primary);
+    fontFamily: AppFonts.body,
+    fontSize: 12,
+    fontWeight: .w400,
+    height: 1.2,
+    color: AppColors.primary,
+  );
 
   static const TextStyle paragraph = TextStyle(
-      fontFamily: AppFonts.body,
-      fontSize: 12, fontWeight: FontWeight.w400, height: 1.5, color: AppColors.textMeta);
+    fontFamily: AppFonts.body,
+    fontSize: 12,
+    fontWeight: .w400,
+    height: 1.5,
+    color: AppColors.textMeta,
+  );
 
   static const TextStyle caption = TextStyle(
-      fontFamily: AppFonts.body,
-      fontSize: 10, fontWeight: FontWeight.w400, height: 1.2, color: AppColors.textMeta);
+    fontFamily: AppFonts.body,
+    fontSize: 10,
+    fontWeight: .w400,
+    height: 1.2,
+    color: AppColors.textMeta,
+  );
 
   static const TextStyle navLabel = TextStyle(
-      fontFamily: AppFonts.body,
-      fontSize: 12, fontWeight: FontWeight.w400, height: 1.2, color: AppColors.textMuted);
+    fontFamily: AppFonts.body,
+    fontSize: 12,
+    fontWeight: .w400,
+    height: 1.2,
+    color: AppColors.textMuted,
+  );
 }
